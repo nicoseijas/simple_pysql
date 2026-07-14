@@ -7,7 +7,7 @@ no boilerplate, and SQL-injection-safe by default. A single file you drop
 into any project.
 
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
-![Python](https://img.shields.io/badge/python-3.6%2B-blue)
+![Python](https://img.shields.io/badge/python-3.7%2B-blue)
 ![SQLite](https://img.shields.io/badge/database-SQLite-003B57)
 ![Tests](https://img.shields.io/badge/tests-55%20passing-brightgreen)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-success)
@@ -49,16 +49,22 @@ off by construction — you focus on the data, not the SQL plumbing.
 
 ## Installation
 
-It's a single file with no third-party dependencies. Clone the repo (or just
-copy `simple_pysql.py` into your project):
+From PyPI:
+
+```bash
+pip install simple-pysql
+```
+
+Or, since it's a single dependency-free file, just clone the repo (or copy
+`simple_pysql.py` into your project):
 
 ```bash
 git clone https://github.com/nicoseijas/simple_pysql
 cd simple_pysql
 ```
 
-Requires Python 3.6+ (uses f-strings and type-hint syntax). No `pip install`
-step is needed to use the module — `pytest` is only required to run the tests.
+Requires Python 3.7+ (uses f-strings and `from __future__ import annotations`).
+`pytest` is only required to run the tests.
 
 ## Quick Start
 
@@ -153,7 +159,7 @@ never touch the SQL string and are always passed as bound `?` parameters.
 
 ## Technologies
 
-- **Python 3.6+**
+- **Python 3.7+**
 - **sqlite3** (Python standard library)
 - **pytest** (tests only)
 
@@ -185,7 +191,7 @@ SQL-injection rejection through table/column identifiers.
 - [x] pytest suite
 - [x] `WHERE` operators beyond equality (`>`, `<`, `IN`, `LIKE`, …)
 - [x] Bulk `insert_many` helper
-- [ ] Package on PyPI (`pip install simple-pysql`)
+- [x] Packaging + PyPI publish workflow (`pip install simple-pysql`)
 - [ ] Optional logging hook
 
 ## Contributing

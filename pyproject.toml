@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "simple-pysql"
+dynamic = ["version"]
+description = "Tiny, SQL-injection-safe CRUD layer over Python's built-in sqlite3."
+readme = "README.md"
+requires-python = ">=3.7"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Nicolás Seijas", email = "nicoseijas@gmail.com" },
+]
+keywords = ["sqlite", "sqlite3", "crud", "database", "orm", "sql"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Database :: Front-Ends",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/nicoseijas/simple_pysql"
+Repository = "https://github.com/nicoseijas/simple_pysql"
+Issues = "https://github.com/nicoseijas/simple_pysql/issues"
+
+[tool.hatch.version]
+path = "simple_pysql.py"
+
+[tool.hatch.build.targets.wheel]
+include = ["simple_pysql.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "simple_pysql.py",
+    "test_simple_pysql.py",
+    "README.md",
+    "LICENSE",
+]
