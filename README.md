@@ -9,7 +9,7 @@ into any project.
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
 ![Python](https://img.shields.io/badge/python-3.6%2B-blue)
 ![SQLite](https://img.shields.io/badge/database-SQLite-003B57)
-![Tests](https://img.shields.io/badge/tests-31%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-45%20passing-brightgreen)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-success)
 
 ```text
@@ -88,6 +88,26 @@ with simple_pysql(filename=':memory:', table='rdr2') as db:
     print(db.count())                        # -> 1
 ```
 
+### WHERE operators
+
+`where` conditions default to equality (`column: value`). For anything else,
+pass a `(operator, value)` tuple. Operators come from a closed whitelist, so
+they can't be used for injection:
+
+```python
+db.delete(where={'id': ('>', 100)})              # id > 100
+db.update(record=dict(active=0),
+          where={'name': ('LIKE', 'John%')})     # name LIKE 'John%'
+db.delete(where={'id': ('IN', [1, 2, 3])})       # id IN (1, 2, 3)
+
+# Multiple conditions are AND-ed; forms can be mixed:
+db.delete(where={'id': ('>=', 10), 'name': 'Arthur Morgan'})
+```
+
+Supported operators: `=`, `!=`, `<>`, `<`, `<=`, `>`, `>=`, `LIKE`, `NOT LIKE`,
+`IN`, `NOT IN`, `IS`, `IS NOT`. For `IN` / `NOT IN` the value must be a
+non-empty, non-string sequence.
+
 ## API
 
 | Method | Purpose |
@@ -156,8 +176,8 @@ SQL-injection rejection through table/column identifiers.
 - [x] Parameterized values + identifier whitelisting
 - [x] Context manager support
 - [x] pytest suite
+- [x] `WHERE` operators beyond equality (`>`, `<`, `IN`, `LIKE`, …)
 - [ ] Package on PyPI (`pip install simple-pysql`)
-- [ ] `WHERE` operators beyond equality (`>`, `<`, `IN`, `LIKE`)
 - [ ] Bulk `insert_many` helper
 - [ ] Optional logging hook
 

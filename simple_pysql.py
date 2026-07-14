@@ -8,12 +8,20 @@ import re
 import sqlite3
 from typing import Any, Iterator, Mapping, Sequence
 
-__version__ = '0.2'
+__version__ = '0.3'
 
 # SQLite cannot bind identifiers (table/column names) as parameters, so they are
 # interpolated into the SQL string. To prevent SQL injection they must be
 # validated against a strict whitelist before use.
 _IDENTIFIER_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+
+# WHERE comparison operators are interpolated into the SQL string, so they must
+# come from this closed whitelist. The keys are the normalized (upper-cased)
+# forms accepted from callers.
+_WHERE_OPERATORS = frozenset({
+    '=', '!=', '<>', '<', '<=', '>', '>=',
+    'LIKE', 'NOT LIKE', 'IN', 'NOT IN', 'IS', 'IS NOT',
+})
 
 
 def _quote_identifier(name: str) -> str:
@@ -119,14 +127,51 @@ class simple_pysql:
     def _build_where(self, where: Mapping[str, Any]) -> tuple[str, list[Any]]:
         """Build a parameterized WHERE clause from a mapping.
 
-        Column names are validated/quoted; values are bound as parameters.
+        Each entry is either ``column: value`` (equality) or
+        ``column: (operator, value)`` where operator comes from a closed
+        whitelist. Column names are validated/quoted and operators are
+        whitelisted; values are always bound as parameters.
         """
-        columns = list(where.keys())
-        values = list(where.values())
-        conditions = ' AND '.join(
-            f'{_quote_identifier(c)} = ?' for c in columns
-        )
-        return f'WHERE {conditions}', values
+        conditions: list[str] = []
+        values: list[Any] = []
+
+        for column, criterion in where.items():
+            col = _quote_identifier(column)
+
+            if isinstance(criterion, tuple):
+                if len(criterion) != 2:
+                    raise ValueError(
+                        'WHERE criterion tuple must be (operator, value), '
+                        f'got {criterion!r}'
+                    )
+                operator, value = criterion
+                operator = operator.upper() if isinstance(operator, str) else operator
+                if operator not in _WHERE_OPERATORS:
+                    raise ValueError(f'Unsupported WHERE operator: {operator!r}')
+
+                if operator in ('IN', 'NOT IN'):
+                    if isinstance(value, (str, bytes)) or not isinstance(
+                        value, (list, tuple, set)
+                    ):
+                        raise ValueError(
+                            f'{operator} requires a non-string sequence, '
+                            f'got {value!r}'
+                        )
+                    value = list(value)
+                    if not value:
+                        raise ValueError(f'{operator} requires a non-empty sequence')
+                    placeholders = ', '.join('?' * len(value))
+                    conditions.append(f'{col} {operator} ({placeholders})')
+                    values.extend(value)
+                else:
+                    conditions.append(f'{col} {operator} ?')
+                    values.append(value)
+            else:
+                conditions.append(f'{col} = ?')
+                values.append(criterion)
+
+        clause = ' AND '.join(conditions)
+        return f'WHERE {clause}', values
 
     def update_prepare(
         self,

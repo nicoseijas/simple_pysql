@@ -123,6 +123,92 @@ def test_delete_without_where_clears_table(db):
     assert db.count() == 0
 
 
+# --- WHERE operators --------------------------------------------------------
+
+def _ids(rows):
+    return sorted(r['id'] for r in rows)
+
+
+def test_where_greater_than(db):
+    rows = db.get_results('SELECT * FROM rdr2')  # sanity: fixture has ids 1..3
+    assert _ids(rows) == [1, 2, 3]
+    db.delete(where={'id': ('>', 1)})
+    assert _ids(db.get_results('SELECT * FROM rdr2')) == [1]
+
+
+def test_where_less_equal(db):
+    db.delete(where={'id': ('<=', 2)})
+    assert _ids(db.get_results('SELECT * FROM rdr2')) == [3]
+
+
+def test_where_not_equal(db):
+    db.update(record=dict(phrase='x'), where={'id': ('!=', 2)})
+    assert db.get_row('SELECT phrase FROM rdr2 WHERE id = ?', [1])['phrase'] == 'x'
+    assert db.get_row('SELECT phrase FROM rdr2 WHERE id = ?', [2])['phrase'] != 'x'
+
+
+def test_where_like(db):
+    db.delete(where={'name': ('LIKE', 'John%')})
+    assert 'John Marston' not in [r['name'] for r in db.get_results('SELECT * FROM rdr2')]
+    assert db.count() == 2
+
+
+def test_where_like_is_case_insensitive_operator(db):
+    # the operator keyword may be given in any case
+    db.delete(where={'name': ('like', 'John%')})
+    assert db.count() == 2
+
+
+def test_where_in_expands_placeholders(db):
+    db.delete(where={'id': ('IN', [1, 3])})
+    assert _ids(db.get_results('SELECT * FROM rdr2')) == [2]
+
+
+def test_where_not_in(db):
+    db.delete(where={'id': ('NOT IN', [2])})
+    assert _ids(db.get_results('SELECT * FROM rdr2')) == [2]
+
+
+def test_where_mixed_equality_and_operator(db):
+    db.update(
+        record=dict(phrase='y'),
+        where={'id': ('>=', 1), 'name': 'Arthur Morgan'},
+    )
+    assert db.get_row('SELECT phrase FROM rdr2 WHERE id = ?', [1])['phrase'] == 'y'
+    assert db.get_row('SELECT phrase FROM rdr2 WHERE id = ?', [2])['phrase'] != 'y'
+
+
+def test_where_unsupported_operator_raises(db):
+    with pytest.raises(ValueError):
+        db.delete(where={'id': ('BADOP', 1)})
+
+
+def test_where_injection_via_operator_raises(db):
+    with pytest.raises(ValueError):
+        db.delete(where={'id': ('= 1 OR 1=1 --', 1)})
+    assert db.count() == 3  # table untouched
+
+
+def test_where_in_requires_sequence(db):
+    with pytest.raises(ValueError):
+        db.delete(where={'id': ('IN', 1)})
+
+
+def test_where_in_rejects_string_sequence(db):
+    with pytest.raises(ValueError):
+        db.delete(where={'name': ('IN', 'abc')})
+
+
+def test_where_in_empty_sequence_raises(db):
+    with pytest.raises(ValueError):
+        db.delete(where={'id': ('IN', [])})
+
+
+def test_where_malformed_tuple_raises(db):
+    with pytest.raises(ValueError):
+        db.delete(where={'id': ('>', 1, 2)})
+
+
 # --- reads ------------------------------------------------------------------
 
 def test_get_row_returns_row_by_name(db):
