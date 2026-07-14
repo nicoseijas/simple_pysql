@@ -9,7 +9,7 @@ into any project.
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
 ![Python](https://img.shields.io/badge/python-3.6%2B-blue)
 ![SQLite](https://img.shields.io/badge/database-SQLite-003B57)
-![Tests](https://img.shields.io/badge/tests-45%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-55%20passing-brightgreen)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-success)
 
 ```text
@@ -73,6 +73,12 @@ with simple_pysql(filename=':memory:', table='rdr2') as db:
     db.insert(record=dict(name='Arthur Morgan', phrase='I Gave You All I Had'))
     db.insert(record=dict(name='John Marston', phrase='Remember the name!'))
 
+    # Create many in a single transaction (all records share the same columns)
+    db.insert_many(records=[
+        dict(name='Sadie Adler', phrase='I trust you'),
+        dict(name='Micah Bell', phrase='You lost'),
+    ])
+
     # Update
     db.update(record=dict(name='Jim Milton'), where=dict(id=2))
 
@@ -113,6 +119,7 @@ non-empty, non-string sequence.
 | Method | Purpose |
 |---|---|
 | `insert(record, table=None)` | Insert a row; returns the new `lastrowid` |
+| `insert_many(records, table=None)` | Bulk-insert rows in one transaction; returns the count |
 | `update(record, where, table=None)` | Update rows matching `where` |
 | `delete(where=None, table=None)` | Delete matching rows (all rows if `where` is omitted) |
 | `get_row(sql, params=())` | Fetch a single `sqlite3.Row` (or `None`) |
@@ -177,8 +184,8 @@ SQL-injection rejection through table/column identifiers.
 - [x] Context manager support
 - [x] pytest suite
 - [x] `WHERE` operators beyond equality (`>`, `<`, `IN`, `LIKE`, …)
+- [x] Bulk `insert_many` helper
 - [ ] Package on PyPI (`pip install simple-pysql`)
-- [ ] Bulk `insert_many` helper
 - [ ] Optional logging hook
 
 ## Contributing

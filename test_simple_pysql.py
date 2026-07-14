@@ -83,6 +83,73 @@ def test_insert_without_table_raises():
     conn.close()
 
 
+# --- insert_many ------------------------------------------------------------
+
+NEW_RECORDS = [
+    dict(name='Micah Bell', phrase='You lost'),
+    dict(name='Dutch van der Linde', phrase='We just need a little more faith'),
+]
+
+
+def test_insert_many_inserts_all_rows(db):
+    db.insert_many(records=NEW_RECORDS)
+    assert db.count() == 3 + len(NEW_RECORDS)
+
+
+def test_insert_many_returns_count(db):
+    assert db.insert_many(records=NEW_RECORDS) == len(NEW_RECORDS)
+
+
+def test_insert_many_persists_values(db):
+    db.insert_many(records=NEW_RECORDS)
+    names = [r['name'] for r in db.get_results('SELECT name FROM rdr2')]
+    assert 'Dutch van der Linde' in names
+
+
+def test_insert_many_accepts_a_generator(db):
+    inserted = db.insert_many(records=(r for r in NEW_RECORDS))
+    assert inserted == len(NEW_RECORDS)
+
+
+def test_insert_many_with_table_argument():
+    conn = simple_pysql(filename=':memory:')
+    conn.query('CREATE TABLE people (id INTEGER PRIMARY KEY, name TEXT)')
+    conn.insert_many(records=[dict(name='A'), dict(name='B')], table='people')
+    assert conn.count() == 2
+    conn.close()
+
+
+def test_insert_many_empty_raises(db):
+    with pytest.raises(ValueError):
+        db.insert_many(records=[])
+
+
+def test_insert_many_mismatched_columns_raises(db):
+    with pytest.raises(ValueError):
+        db.insert_many(records=[dict(name='A'), dict(phrase='B')])
+
+
+def test_insert_many_without_table_raises():
+    conn = simple_pysql(filename=':memory:')
+    with pytest.raises(ValueError):
+        conn.insert_many(records=[dict(name='x')])
+    conn.close()
+
+
+def test_insert_many_rejects_injection_via_column(db):
+    with pytest.raises(ValueError):
+        db.insert_many(records=[{'name); DROP TABLE rdr2;--': 'x'}])
+    assert db.count() == 3
+
+
+def test_insert_many_keeps_values_literal(db):
+    payload = "Robert'); DROP TABLE rdr2;--"
+    db.insert_many(records=[dict(name=payload)])
+    row = db.get_row('SELECT name FROM rdr2 WHERE name = ?', [payload])
+    assert row is not None
+    assert db.count() == 4
+
+
 # --- update -----------------------------------------------------------------
 
 def test_update_changes_record(db):

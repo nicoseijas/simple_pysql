@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from typing import Any, Iterator, Mapping, Sequence
+from typing import Any, Iterable, Iterator, Mapping, Sequence
 
-__version__ = '0.3'
+__version__ = '0.4'
 
 # SQLite cannot bind identifiers (table/column names) as parameters, so they are
 # interpolated into the SQL string. To prevent SQL injection they must be
@@ -123,6 +123,48 @@ class simple_pysql:
         lastrowid = self.insert_prepare(record, table)
         self._db.commit()
         return lastrowid
+
+    def insert_many(
+        self,
+        records: Iterable[Mapping[str, Any]],
+        table: str | None = None,
+    ) -> int:
+        """
+            Insert many records in a single transaction (one commit).
+            All records must share the same columns.
+            db.insert_many(
+                table = 'table',  # Optional parameter
+                records = [
+                    { 'column1' : 'a', 'column2' : 'b' },
+                    { 'column1' : 'c', 'column2' : 'd' },
+                ]
+            )
+            returns the number of inserted rows.
+        """
+        target = self._resolve_table(table)
+        records = list(records)
+        if not records:
+            raise ValueError('records must not be empty')
+
+        columns = list(records[0].keys())
+        if not columns:
+            raise ValueError('records must not be empty')
+        column_set = set(columns)
+
+        rows = []
+        for record in records:
+            if set(record.keys()) != column_set:
+                raise ValueError('all records must have the same columns')
+            rows.append(tuple(record[c] for c in columns))
+
+        query = 'INSERT INTO {} ({}) VALUES ({})'.format(
+            _quote_identifier(target),
+            ', '.join(_quote_identifier(c) for c in columns),
+            ', '.join('?' * len(columns)),
+        )
+        self._db.executemany(query, rows)
+        self._db.commit()
+        return len(rows)
 
     def _build_where(self, where: Mapping[str, Any]) -> tuple[str, list[Any]]:
         """Build a parameterized WHERE clause from a mapping.
